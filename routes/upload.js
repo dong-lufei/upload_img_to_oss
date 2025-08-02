@@ -37,57 +37,62 @@ const upload = multer({
   }
 });
 
-// 图片上传接口
-router.post('/image', upload.single('image'), async (req, res) => {
+// 图片上传接口 - 支持 * 张图片
+router.post('/image', upload.array('images', 10), async (req, res) => {
   try {
-    if (!req.file) {
+    if (!req.files || req.files.length === 0) {
       return res.status(400).json({
         success: false,
         message: '请选择要上传的图片'
       });
     }
 
-    const timestamp = Date.now();
-    const randomStr = Math.random().toString(36).substring(2);
-    const ext = path.extname(req.file.originalname);
-    
-    // 根据查询参数决定是否为长期访问
     const isLongTerm = req.query.longTerm === 'true';
-    const fileName = isLongTerm 
-      ? `public/images/${timestamp}_${randomStr}${ext}`
-      : `private/images/${timestamp}_${randomStr}${ext}`;
+    const uploadPromises = req.files.map(async (file) => {
+      const timestamp = Date.now();
+      const randomStr = Math.random().toString(36).substring(2);
+      const ext = path.extname(file.originalname);
+      
+      const fileName = isLongTerm 
+        ? `public/images/${timestamp}_${randomStr}${ext}`
+        : `private/images/${timestamp}_${randomStr}${ext}`;
 
-    const result = await client.put(fileName, req.file.buffer);
-    
-    let responseData;
-    if (isLongTerm) {
-      // 长期访问：直接返回原始URL
-      responseData = {
-        url: result.url,
-        name: result.name,
-        size: req.file.size,
-        accessType: 'public',
-        expires: '永久'
-      };
-    } else {
-      // 短期访问：返回签名URL
-      const signedUrl = client.signatureUrl(fileName, {
-        expires: 7 * 24 * 60 * 60 // 7天
-      });
-      responseData = {
-        url: signedUrl,
-        originalUrl: result.url,
-        name: result.name,
-        size: req.file.size,
-        accessType: 'private',
-        expires: '7天'
-      };
-    }
+      const result = await client.put(fileName, file.buffer);
+      
+      if (isLongTerm) {
+        return {
+          url: result.url,
+          name: result.name,
+          size: file.size,
+          originalName: file.originalname,
+          accessType: 'public',
+          expires: '永久'
+        };
+      } else {
+        const signedUrl = client.signatureUrl(fileName, {
+          expires: 7 * 24 * 60 * 60
+        });
+        return {
+          url: signedUrl,
+          originalUrl: result.url,
+          name: result.name,
+          size: file.size,
+          originalName: file.originalname,
+          accessType: 'private',
+          expires: '7天'
+        };
+      }
+    });
+
+    const uploadResults = await Promise.all(uploadPromises);
 
     res.json({
       success: true,
-      message: '图片上传成功',
-      data: responseData
+      message: `成功上传 ${uploadResults.length} 张图片`,
+      data: {
+        count: uploadResults.length,
+        images: uploadResults
+      }
     });
 
   } catch (error) {
@@ -100,6 +105,7 @@ router.post('/image', upload.single('image'), async (req, res) => {
 });
 
 export default router;
+
 
 
 
