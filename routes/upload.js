@@ -13,7 +13,8 @@ const client = new OSS({
   region: process.env.OSS_REGION,
   accessKeyId: process.env.OSS_ACCESS_KEY_ID,
   accessKeySecret: process.env.OSS_ACCESS_KEY_SECRET,
-  bucket: process.env.OSS_BUCKET
+  bucket: process.env.OSS_BUCKET,
+  secure: true // 启用HTTPS
 });
 
 // 配置multer用于处理文件上传
@@ -49,18 +50,44 @@ router.post('/image', upload.single('image'), async (req, res) => {
     const timestamp = Date.now();
     const randomStr = Math.random().toString(36).substring(2);
     const ext = path.extname(req.file.originalname);
-    const fileName = `myImages/${timestamp}_${randomStr}${ext}`;
+    
+    // 根据查询参数决定是否为长期访问
+    const isLongTerm = req.query.longTerm === 'true';
+    const fileName = isLongTerm 
+      ? `public/images/${timestamp}_${randomStr}${ext}`
+      : `private/images/${timestamp}_${randomStr}${ext}`;
 
     const result = await client.put(fileName, req.file.buffer);
+    
+    let responseData;
+    if (isLongTerm) {
+      // 长期访问：直接返回原始URL
+      responseData = {
+        url: result.url,
+        name: result.name,
+        size: req.file.size,
+        accessType: 'public',
+        expires: '永久'
+      };
+    } else {
+      // 短期访问：返回签名URL
+      const signedUrl = client.signatureUrl(fileName, {
+        expires: 7 * 24 * 60 * 60 // 7天
+      });
+      responseData = {
+        url: signedUrl,
+        originalUrl: result.url,
+        name: result.name,
+        size: req.file.size,
+        accessType: 'private',
+        expires: '7天'
+      };
+    }
 
     res.json({
       success: true,
       message: '图片上传成功',
-      data: {
-        url: result.url,
-        name: result.name,
-        size: req.file.size
-      }
+      data: responseData
     });
 
   } catch (error) {
@@ -73,4 +100,7 @@ router.post('/image', upload.single('image'), async (req, res) => {
 });
 
 export default router;
+
+
+
 
