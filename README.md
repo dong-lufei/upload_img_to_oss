@@ -13,7 +13,9 @@ node app
 ```
 
 # 前端使用方法：
+
 > 支持批量上传
+
 ```
 POST 请求到 http://localhost:3000/api/upload/image
 请求体使用 multipart/form-data 格式
@@ -22,21 +24,23 @@ POST 请求到 http://localhost:3000/api/upload/image
 
 ```json
 {
-    "success": true,
-    "message": "成功上传 1 张图片",
-    "data": {
-        "count": 1,
-        "images": [
-            {
-                "url": "https://my-personal-oss-2025-07-10.oss-cn-wuhan-lr.aliyuncs.com/private/images/1754100268460_4vs6cf93633.png?OSSAccessKeyId=LTAI5tDy5t6Y6VBsTykyj8D2&Expires=1754705072&Signature=kkK33CywPgeHLIVyKwvcRv925%2F8%3D",
-                "originalUrl": "https://my-personal-oss-2025-07-10.oss-cn-wuhan-lr.aliyuncs.com/private/images/1754100268460_4vs6cf93633.png",
-                "name": "private/images/1754100268460_4vs6cf93633.png",
-                "size": 1881,
-                "originalName": "wechat_2025-08-01_214634_022.png",
-                "accessType": "private",
-                "expires": "7天"
-            }
-        ]
-    }
+  "success": true,
+  "message": "成功上传 1 张图片",
+  "data": {
+    "count": 1,
+    "images": [
+      {
+        // 返回私有临时图片url
+        "url": "https://my-personal-oss-2025-07-10.oss-cn-wuhan-lr.aliyuncs.com/private/images/1754100268460_4vs6cf93633.png?OSSAccessKeyId=LTAI5tDy5t6Y6VBsTykyj8D2&Expires=1754705072&Signature=kkK33CywPgeHLIVyKwvcRv925%2F8%3D",
+        // 返回公共图片url，需要阿里云对应 Bucket 设置为公共读
+        "originalUrl": "https://my-personal-oss-2025-07-10.oss-cn-wuhan-lr.aliyuncs.com/private/images/1754100268460_4vs6cf93633.png",
+        "name": "private/images/1754100268460_4vs6cf93633.png",
+        "size": 1881,
+        "originalName": "wechat_2025-08-01_214634_022.png",
+        "accessType": "private",
+        "expires": "7天"
+      }
+    ]
+  }
 }
 ```
